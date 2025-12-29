@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Analysis Task",
+  "required": ["type", "title", "description"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "analysis"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title",
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of analysis goals"
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": ["x.com", "reddit", "hackernews", "linkedin", "web"],
+          "description": "Platform to analyze"
+        },
+        "search_terms": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Terms to search for"
+        },
+        "timeframe": {
+          "type": "string",
+          "enum": ["last_24h", "last_7_days", "last_30_days", "last_90_days"],
+          "default": "last_7_days"
+        },
+        "analysis_type": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["sentiment", "key_themes", "influential_voices", "trends", "engagement"]
+          },
+          "default": ["key_themes"]
+        },
+        "min_engagement": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Minimum engagement (likes, retweets) to include"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": ["markdown", "html", "pdf"],
+          "default": "markdown"
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["google_drive", "onedrive", "both"],
+          "default": "google_drive"
+        },
+        "folder": {
+          "type": "string",
+          "default": "DeepAgent/Analysis"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "analysis",
+      "title": "Bitter Lesson Trends on X.com",
+      "description": "Analyze recent trends on 'Bitter Lesson' in AI Engineering",
+      "config": {
+        "platform": "x.com",
+        "search_terms": ["Bitter Lesson", "AI Engineering", "Rich Sutton"],
+        "timeframe": "last_7_days",
+        "analysis_type": ["sentiment", "key_themes", "influential_voices"]
+      },
+      "delivery": {
+        "email": "user@example.com",
+        "storage": "google_drive"
+      }
+    }
+  ]
+}

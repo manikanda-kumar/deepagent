@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Document Generation Task",
+  "required": ["type", "title", "description"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "document"
+    },
+    "title": {
+      "type": "string",
+      "description": "Document title",
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of document to generate"
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "document_type": {
+          "type": "string",
+          "enum": ["report", "summary", "newsletter", "technical_doc"],
+          "default": "report"
+        },
+        "template": {
+          "type": "string",
+          "description": "Template name to use"
+        },
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Source URLs or file paths"
+        },
+        "sections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required sections in the document"
+        },
+        "max_length": {
+          "type": "string",
+          "enum": ["brief", "standard", "comprehensive"],
+          "default": "standard"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": ["markdown", "html", "pdf"],
+          "default": "markdown"
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["google_drive", "onedrive", "both"],
+          "default": "google_drive"
+        },
+        "folder": {
+          "type": "string",
+          "default": "DeepAgent/Documents"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "document",
+      "title": "Weekly Project Status Report",
+      "description": "Generate weekly status report from project updates",
+      "config": {
+        "document_type": "report",
+        "sections": ["Executive Summary", "Progress", "Blockers", "Next Steps"],
+        "max_length": "standard",
+        "output_format": "markdown"
+      },
+      "delivery": {
+        "email": "team@example.com",
+        "storage": "google_drive"
+      }
+    }
+  ]
+}

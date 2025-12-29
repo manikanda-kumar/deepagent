@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Research Task",
+  "required": ["type", "title", "description"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "research"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title",
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of research goals"
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "topics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific topics to research"
+        },
+        "feeds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "description": "RSS feed URLs for news aggregation"
+        },
+        "depth": {
+          "type": "string",
+          "enum": ["quick", "standard", "comprehensive"],
+          "default": "standard",
+          "description": "Research depth level"
+        },
+        "lookback_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24,
+          "description": "Hours to look back for time-sensitive research"
+        },
+        "include_code_examples": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include code examples in technical research"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": ["markdown", "html", "pdf"],
+          "default": "markdown"
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address for notification"
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["google_drive", "onedrive", "both"],
+          "default": "google_drive"
+        },
+        "folder": {
+          "type": "string",
+          "default": "DeepAgent/Reports"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "research",
+      "title": "Daily Tech News Summary",
+      "description": "Create daily summary of new articles from RSS feeds",
+      "config": {
+        "feeds": [
+          "https://news.ycombinator.com/rss",
+          "https://feeds.arstechnica.com/arstechnica/technology-lab"
+        ],
+        "lookback_hours": 24,
+        "output_format": "markdown"
+      },
+      "delivery": {
+        "email": "user@example.com",
+        "storage": "google_drive"
+      }
+    }
+  ]
+}

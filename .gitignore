@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Flutter
+app/.dart_tool/
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+app/*.iml
+app/.metadata
+app/ios/Pods/
+app/ios/.symlinks/
+app/android/.gradle/
+app/android/local.properties
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment & Secrets
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+firebase-credentials.json
+token.json
+
+# Data & Logs
+/data/
+*.log
+*.sqlite
+*.db
+
+# Skills symlinks (created on VM)
+claude/skills/*
+!claude/skills/.gitkeep
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# SPEC
+*.md
+!SPEC.md

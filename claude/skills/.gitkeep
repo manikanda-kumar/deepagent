@@ -1,0 +1,2 @@
+# Skills are symlinked from /opt/pi-skills on the VM
+# See scripts/init.sh for setup
