@@ -12,16 +12,17 @@ deepagent/
 ├── README.md
 ├── .gitignore
 │
-├── app/                          # Flutter mobile app
+├── app/                          # Flutter web/mobile client
 │   ├── pubspec.yaml
 │   ├── lib/
 │   │   ├── main.dart
-│   │   ├── models/
-│   │   ├── screens/
-│   │   ├── services/
-│   │   └── widgets/
-│   ├── android/
-│   ├── ios/
+│   │   ├── models/              # Task, Result data models
+│   │   ├── screens/             # Home, NewTask, TaskDetail
+│   │   ├── services/            # API client, local storage
+│   │   └── widgets/             # Reusable UI components
+│   ├── web/                     # Web-specific assets (Phase 1)
+│   ├── android/                 # Android (Phase 3)
+│   ├── ios/                     # iOS (Phase 3)
 │   └── test/
 │
 ├── orchestrator/                 # FastAPI backend
@@ -70,8 +71,9 @@ deepagent/
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Mobile App (Flutter)                        │
-│                    Task Submission + Notifications                  │
+│                      Client (Flutter Web/Mobile)                    │
+│   Phase 1A: Local web testing    │    Phase 3: iOS/Android apps    │
+│   Phase 1B: Deployable web       │    Push notifications           │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -130,23 +132,57 @@ deepagent/
 
 ## Components
 
-### 1. Mobile App (Flutter)
+### 1. Client Application (Flutter)
 
-**Purpose**: User interface for task submission and result notifications
+**Purpose**: User interface for task submission, monitoring, and result viewing
 
-**Phase 1 Features**:
-- Task submission form with natural language input
-- Task type selection (Research / Document Generation / Analysis)
-- Attachment support (upload reference files)
-- Push notifications on task completion
-- Task history and status view
-- Result preview with cloud storage links
+**Phased Approach**: Start with a minimal web client to validate the orchestrator E2E flow before building rich native apps.
 
-**Phase 2 Features**:
-- Real-time progress updates (WebSocket)
-- Scheduled/recurring task creation
-- In-app result viewer
-- Voice input for task submission
+#### Phase 1A: Local Web Testing Client
+> Focus: Validate orchestrator API and E2E flow
+
+- **Platform**: Flutter Web (runs locally via `flutter run -d chrome`)
+- **Features**:
+  - Simple task submission form (title, description, type dropdown)
+  - Task list with status indicators
+  - Basic task detail view (status, timestamps, error messages)
+  - Manual refresh for status updates
+- **No auth required** (connects to localhost orchestrator)
+- **No cloud features** (no push notifications, no cloud storage)
+
+#### Phase 1B: Web App (Deployable)
+> Focus: Usable web interface for remote access
+
+- **Platform**: Flutter Web (hosted alongside orchestrator or separately)
+- **Features**:
+  - All Phase 1A features
+  - Attachment upload support
+  - Result preview with output file links
+  - Task cancellation
+  - Simple authentication (API key or basic auth)
+- **Deployment**: Static hosting or served by orchestrator
+
+#### Phase 2: Enhanced Web Experience
+> Focus: Rich web interface with real-time features
+
+- **Features**:
+  - Real-time progress updates (WebSocket)
+  - In-browser result viewer (markdown, PDF preview)
+  - Task history with search/filter
+  - Cloud storage link integration (Drive/OneDrive)
+  - Responsive design for tablet/mobile browsers
+
+#### Phase 3: Native Mobile Apps
+> Focus: Full-featured native experience
+
+- **Platforms**: iOS, Android
+- **Features**:
+  - All Phase 2 features
+  - Push notifications (Firebase Cloud Messaging)
+  - Voice input for task submission
+  - Scheduled/recurring tasks
+  - Offline task queuing
+  - Native sharing integrations
 
 ### 2. Orchestrator Service (Python)
 
@@ -797,13 +833,28 @@ WS     /api/v1/tasks/{id}/stream  # Real-time progress
 POST   /api/v1/schedules          # Create scheduled task
 ```
 
-### Mobile App Screens
+### Client App Screens (Phased)
 
-1. **Home** - Quick task submission + recent tasks
-2. **New Task** - Task creation form with templates
-3. **Task Detail** - Status, progress, results
-4. **History** - All past tasks with search/filter
-5. **Settings** - Cloud accounts, notifications, preferences
+**Phase 1A (Local Web Testing)**:
+1. **Home** - Task list + "New Task" button
+2. **New Task** - Simple form: title, description, type dropdown
+3. **Task Detail** - Status, timestamps, error (if any)
+
+**Phase 1B (Deployable Web)**:
+4. **Home** - Add attachment indicator, status badges
+5. **New Task** - Add file upload, delivery options
+6. **Task Detail** - Add output files, cancel button
+7. **Login** - API key input
+
+**Phase 2 (Enhanced Web)**:
+8. **Task Detail** - Real-time progress, inline result viewer
+9. **History** - Paginated list with search/filter
+10. **Settings** - Cloud storage links, preferences
+
+**Phase 3 (Native Mobile)**:
+11. **Home** - Quick task submission widget
+12. **New Task** - Voice input, templates
+13. **Settings** - Push notifications, offline queue
 
 ### Security & Operations
 
@@ -862,53 +913,79 @@ POST   /api/v1/schedules          # Create scheduled task
 
 ## Development Phases
 
-### Phase 1: Core Functionality
+### Phase 1A: Core Backend + Local Testing Client
+> **Goal**: Validate E2E flow with minimal frontend
 
-| Component | Deliverables |
-|-----------|-------------|
-| VM Setup | Init script with pi-skills, onedrive-cli, Claude Code |
-| Orchestrator | Task queue, Claude CLI wrapper, result processor |
-| Skills Config | browser-tools, gdcli, gmcli, brave-search setup |
-| Agent Prompts | researcher.md, document_gen.md, analyzer.md |
-| Mobile App | Task submission, push notifications, history view |
-| Integrations | Google Drive + OneDrive + Gmail via CLI tools |
+| Component | Deliverables | Priority |
+|-----------|-------------|----------|
+| Orchestrator | Task queue, Claude CLI wrapper, result processor | P0 |
+| VM Setup | Init script with pi-skills, Claude Code | P0 |
+| Agent Prompts | researcher.md, analyzer.md, document_gen.md | P0 |
+| **Web Client** | **Local Flutter web app for testing** | P0 |
+| E2E Test | Submit task → Claude run → output saved → status update | P0 |
 
-### Phase 2: Enhanced Experience
+**Definition of Done**:
+- Can submit a task via local web UI
+- Task runs through orchestrator → Claude → saves output
+- Task status visible in web UI
+- All tests pass on iximiuz VM
 
-| Component | Deliverables |
-|-----------|-------------|
-| Real-time | WebSocket progress streaming |
-| Scheduling | Cron-based recurring tasks (APScheduler) |
-| App | In-app result viewer, voice input |
-| Tools | youtube-transcript, transcribe integration |
-| Multi-VM | Scale to multiple VMs for parallel tasks |
+### Phase 1B: Deployable Web App + Security Hardening
+> **Goal**: Usable remote interface with basic security
 
-### Phase 3: Advanced Features
+| Component | Deliverables | Priority |
+|-----------|-------------|----------|
+| API Security | API key auth, rate limiting, CORS config | P0 |
+| Web Client | Attachments, results preview, task cancellation | P0 |
+| Cloud Delivery | Google Drive/OneDrive upload, Gmail notification | P1 |
+| Deployment | Static hosting, HTTPS via labctl | P1 |
 
-| Component | Deliverables |
-|-----------|-------------|
-| Workflows | Multi-step task chains |
-| Templates | Reusable task templates library |
-| Collaboration | Shared tasks, team features |
-| Analytics | Usage stats, cost tracking |
+**Definition of Done**:
+- Can access web UI remotely over HTTPS
+- Authentication protects API endpoints
+- Task results uploaded to cloud storage
+- Email notifications on completion
+
+### Phase 2: Enhanced Web Experience
+> **Goal**: Rich, real-time web interface
+
+| Component | Deliverables | Priority |
+|-----------|-------------|----------|
+| Real-time | WebSocket progress streaming | P1 |
+| Web Client | Inline result viewer, search/filter history | P1 |
+| Tools | youtube-transcript, transcribe integration | P2 |
+| Observability | Structured logging, metrics dashboard | P2 |
+
+### Phase 3: Native Mobile + Advanced Features
+> **Goal**: Full-featured native apps
+
+| Component | Deliverables | Priority |
+|-----------|-------------|----------|
+| iOS/Android | Native Flutter apps with push notifications | P1 |
+| Voice Input | Speech-to-text for task submission | P2 |
+| Scheduling | Cron-based recurring tasks (APScheduler) | P2 |
+| Workflows | Multi-step task chains | P3 |
+| Templates | Reusable task templates library | P3 |
+| Multi-VM | Scale to multiple VMs for parallel tasks | P3 |
 
 ---
 
 ## Tech Stack Summary
 
-| Layer | Technology |
-|-------|------------|
-| Mobile App | Flutter (Dart) |
-| Backend API | FastAPI (Python) |
-| AI Engine | Claude Code CLI |
-| Task Queue | SQLite + background workers |
-| Web Automation | pi-skills/browser-tools (CDP) |
-| Web Search | pi-skills/brave-search |
-| Google Drive | pi-skills/gdcli |
-| Gmail | pi-skills/gmcli |
-| OneDrive | onedrive-cli |
-| VM Platform | iximiuz Playground (labctl) |
-| Notifications | Firebase Cloud Messaging |
+| Layer | Technology | Phase |
+|-------|------------|-------|
+| Client (Web) | Flutter Web | 1A |
+| Client (Mobile) | Flutter iOS/Android | 3 |
+| Backend API | FastAPI (Python) | 1A |
+| AI Engine | Claude Code CLI | 1A |
+| Task Queue | SQLite + background workers | 1A |
+| Web Automation | pi-skills/browser-tools (CDP) | 1B |
+| Web Search | pi-skills/brave-search | 1A |
+| Google Drive | pi-skills/gdcli | 1B |
+| Gmail | pi-skills/gmcli | 1B |
+| OneDrive | onedrive-cli | 1B |
+| VM Platform | iximiuz Playground (labctl) | 1A |
+| Notifications | Firebase Cloud Messaging | 3 |
 
 ---
 
@@ -1032,36 +1109,51 @@ The orchestrator has been tested end-to-end with real Claude CLI execution:
 
 ## Next Steps
 
-### Repository Setup
-1. [ ] Initialize monorepo structure (`app/`, `orchestrator/`, `claude/`, `scripts/`)
-2. [ ] Create `.gitignore` for Python, Flutter, and secrets
-3. [ ] Write `README.md` with quick start guide
+### Phase 1A: Core Backend + Local Web Client
 
-### Orchestrator (`orchestrator/`)
-4. [ ] Create FastAPI project with `pyproject.toml` and `requirements.txt`
-5. [ ] Implement task queue with SQLite (`core/task_queue.py`)
-6. [ ] Implement Claude Code CLI wrapper (`core/claude_runner.py`)
-7. [ ] Create REST API endpoints (`api/routes.py`)
+#### Orchestrator (✅ Mostly Complete)
+- [x] Create FastAPI project with requirements.txt
+- [x] Implement task queue with SQLite (`core/task_queue.py`)
+- [x] Implement Claude Code CLI wrapper (`core/claude_runner.py`)
+- [x] Create REST API endpoints (`api/routes.py`)
+- [x] Background worker (`core/worker.py`)
+- [ ] Add structured logging with correlation IDs
 
-### Claude Scaffolding (`claude/`)
-8. [ ] Write agent prompts (`prompts/researcher.md`, `prompts/analyzer.md`)
-9. [ ] Create task templates (`templates/*.json`)
-10. [ ] Write `CLAUDE.md` project instructions
+#### Claude Scaffolding
+- [x] Write `CLAUDE.md` project instructions
+- [ ] Write agent prompts (`prompts/researcher.md`, `prompts/analyzer.md`)
+- [ ] Create task templates (`templates/*.json`)
 
-### Scripts (`scripts/`)
-11. [ ] Finalize `init.sh` for VM setup
-12. [ ] Create `setup-oauth.sh` for first-time authentication
-13. [ ] Create `deploy.sh` for updates
+#### Scripts (✅ Complete)
+- [x] Finalize `init.sh` for VM setup
+- [x] Create `setup-oauth.sh` for first-time authentication
+- [x] Create `deploy.sh` for updates
 
-### Mobile App (`app/`)
-14. [ ] Create Flutter project scaffold
-15. [ ] Implement task submission screen
-16. [ ] Add Firebase push notification support
-17. [ ] Build task history and results view
+#### **Flutter Web Client (New Priority)**
+- [ ] Create Flutter project scaffold (`flutter create app`)
+- [ ] Enable web support (`flutter config --enable-web`)
+- [ ] Implement API client service (connect to localhost:8000)
+- [ ] **Home Screen**: Task list with status badges, refresh button
+- [ ] **New Task Screen**: Simple form (title, description, type dropdown)
+- [ ] **Task Detail Screen**: Status, timestamps, error display
+- [ ] Test local E2E: web UI → orchestrator → Claude → result
 
-### Integration Testing
-18. [ ] Test VM setup with labctl
-19. [ ] Test end-to-end: task → Claude → skills → result → notification
+#### Integration Testing
+- [x] Test VM setup with labctl
+- [x] Test E2E: task → Claude → output saved
+- [ ] Test E2E with Flutter web client
+
+### Phase 1B: Security + Deployable Web
+
+- [ ] API Security: API key auth, rate limiting enforcement
+- [ ] CORS configuration for production
+- [ ] Attachment upload support
+- [ ] Result preview with file links
+- [ ] Task cancellation from UI
+- [ ] Cloud delivery: Drive/OneDrive upload, Gmail notification
+- [ ] Deploy web client (static hosting)
+
+### Phase 2+: See Development Phases section above
 
 ---
 
