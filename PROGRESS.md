@@ -27,9 +27,12 @@
 - [x] Create `init.sh` for VM initialization
 - [x] Create `setup-oauth.sh` for OAuth authentication
 - [x] Create `deploy.sh` for updates
-- [ ] Update `init.sh` with dedicated user (deepagent)
-- [ ] Update `init.sh` with proper permissions
-- [ ] Add secrets setup to `init.sh` (/etc/deepagent/env)
+- [x] Update `init.sh` with dedicated user (deepagent)
+- [x] Update `init.sh` with proper permissions
+- [x] Add secrets setup to `init.sh` (/etc/deepagent/env)
+- [x] Fix systemd service (PYTHONPATH, correct uvicorn module path)
+- [x] Add Python version detection and error handling
+- [x] Update `setup-oauth.sh` to write to /etc/deepagent/env
 - [ ] Test `init.sh` on iximiuz playground
 - [ ] Test `setup-oauth.sh` flow
 
@@ -198,7 +201,7 @@ Each task must meet these criteria:
 |----------|------|-------|----------|
 | Repository Setup | 9 | 9 | 100% |
 | Claude Scaffolding | 7 | 8 | 88% |
-| Scripts | 3 | 8 | 38% |
+| Scripts | 9 | 11 | 82% |
 | Orchestrator (Config/Models) | 5 | 5 | 100% |
 | Orchestrator (Core) | 3 | 3 | 100% |
 | Orchestrator (API) | 2 | 4 | 50% |
@@ -206,7 +209,7 @@ Each task must meet these criteria:
 | Orchestrator (Observability) | 3 | 4 | 75% |
 | Mobile App | 0 | 10 | 0% |
 | Integration Testing | 6 | 10 | 60% |
-| **Phase 1 Total** | **39** | **63** | **62%** |
+| **Phase 1 Total** | **45** | **66** | **68%** |
 
 ---
 
@@ -338,4 +341,4 @@ Based on `review.md`, the following has been incorporated:
 
 ---
 
-*Last updated: 2025-12-29 (E2E tests passed)*
+*Last updated: 2025-12-29 (Scripts updated for VM deployment)*
