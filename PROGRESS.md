@@ -38,71 +38,75 @@
 #### Configuration & Models
 - [x] Create project structure with `__init__.py` files
 - [x] Create `requirements.txt` with dependencies
-- [ ] Create `config.py` with pydantic-settings
-  - [ ] Environment variable loading
-  - [ ] Default values
-  - [ ] Validation
+- [x] Create `config.py` with pydantic-settings
+  - [x] Environment variable loading
+  - [x] Default values
+  - [x] Validation
   - [ ] Unit tests
-- [ ] Implement `db/models.py` (SQLAlchemy)
-  - [ ] Task model with all fields (id, type, status, attempts, timestamps, etc.)
-  - [ ] TaskLog model for structured logging
-  - [ ] Status enum with all states
+- [x] Implement `db/models.py` (SQLAlchemy)
+  - [x] Task model with all fields (id, type, status, attempts, timestamps, etc.)
+  - [x] TaskLog model for structured logging
+  - [x] Device model for authentication
+  - [x] Status enum with all states
   - [ ] Unit tests
-- [ ] Implement `api/models.py` (Pydantic)
-  - [ ] TaskCreate, TaskResponse, TaskResult
-  - [ ] ErrorResponse with error codes
+- [x] Implement `api/models.py` (Pydantic)
+  - [x] TaskCreate, TaskResponse, TaskResult
+  - [x] ErrorResponse with error codes
+  - [x] Authentication models (DeviceRegister, TokenRequest, etc.)
   - [ ] Validation tests
 
 #### Core Logic
-- [ ] Implement `core/task_queue.py`
-  - [ ] SQLite queue with row-level locking
-  - [ ] Enqueue, dequeue, update operations
-  - [ ] Retry logic with exponential backoff
-  - [ ] Task state transitions
+- [x] Implement `core/task_queue.py`
+  - [x] SQLite queue with row-level locking
+  - [x] Enqueue, dequeue, update operations
+  - [x] Retry logic with exponential backoff
+  - [x] Task state transitions
   - [ ] Unit tests for retry/backoff
-- [ ] Implement `core/claude_runner.py`
-  - [ ] Claude Code CLI wrapper
-  - [ ] Task type → prompt mapping
-  - [ ] Timeout enforcement per task type
-  - [ ] Cancellation support (SIGTERM)
-  - [ ] Partial result saving
+- [x] Implement `core/claude_runner.py`
+  - [x] Claude Code CLI wrapper
+  - [x] Task type → prompt mapping
+  - [x] Timeout enforcement per task type
+  - [x] Cancellation support (SIGTERM)
+  - [x] Partial result saving
   - [ ] Integration test (mock or real)
-- [ ] Implement `core/result_processor.py`
-  - [ ] Process Claude output
-  - [ ] Upload to cloud storage (gdcli, onedrive)
-  - [ ] Send email notification (gmcli)
-  - [ ] Update task status
-  - [ ] Handle upload/email failures
+- [x] Implement `core/result_processor.py`
+  - [x] Process Claude output
+  - [x] Upload to cloud storage (gdcli, onedrive)
+  - [x] Send email notification (gmcli)
+  - [x] Update task status
+  - [x] Handle upload/email failures
 
 #### API Layer
-- [ ] Implement `api/routes.py`
-  - [ ] POST /tasks - submit task
-  - [ ] GET /tasks - list tasks
-  - [ ] GET /tasks/{id} - task details
-  - [ ] GET /tasks/{id}/result - task result
-  - [ ] DELETE /tasks/{id} - cancel task
-  - [ ] GET /health - health check
+- [x] Implement `api/routes.py`
+  - [x] POST /tasks - submit task
+  - [x] GET /tasks - list tasks
+  - [x] GET /tasks/{id} - task details
+  - [x] GET /tasks/{id}/result - task result
+  - [x] DELETE /tasks/{id} - cancel task
+  - [x] GET /health - health check
+  - [x] GET /tasks/{id}/logs - task logs
+  - [x] GET /stats - queue statistics
 - [ ] Add JWT authentication
   - [ ] POST /auth/register - device registration
   - [ ] POST /auth/token - get token
   - [ ] Token validation middleware
   - [ ] Refresh token support
 - [ ] Add rate limiting middleware
-- [ ] Add CORS configuration
-- [ ] Add request/attachment size limits
+- [x] Add CORS configuration
+- [ ] Add request/attachment size limits middleware
 
 #### Background Worker
-- [ ] Implement background worker process
-  - [ ] Separate from FastAPI request thread
-  - [ ] Poll queue for pending tasks
-  - [ ] Execute Claude runner
-  - [ ] Handle graceful shutdown
+- [x] Implement background worker process
+  - [x] Separate from FastAPI request thread
+  - [x] Poll queue for pending tasks
+  - [x] Execute Claude runner
+  - [x] Handle graceful shutdown
 - [ ] Add worker to systemd service
 
 #### Observability
-- [ ] Add structured logging with correlation IDs
-- [ ] Add request ID middleware
-- [ ] Log key events (task lifecycle)
+- [x] Add structured logging with correlation IDs
+- [x] Add request ID middleware (via correlation_id)
+- [x] Log key events (task lifecycle)
 - [ ] Add basic metrics logging
 
 ### Mobile App (`app/`)
@@ -127,6 +131,7 @@
 - [ ] Deploy to iximiuz VM with new init.sh
 - [ ] Verify dedicated user setup and permissions
 - [ ] Test secrets loading from /etc/deepagent/env
+- [x] Test orchestrator starts and accepts requests (local)
 - [ ] Test end-to-end happy path:
   - [ ] Submit research task via API
   - [ ] Claude executes (mock or real)
@@ -177,13 +182,13 @@ Each task must meet these criteria:
 
 | Component | DoD Criteria |
 |-----------|--------------|
-| `config.py` | Loads/validates env vars, has defaults, unit test passes |
-| `db/models.py` | All fields from spec, migrations work, unit tests pass |
-| `api/models.py` | Validation works, error codes match spec, tests pass |
-| `task_queue.py` | Retry/backoff works, state transitions correct, tests pass |
-| `claude_runner.py` | Timeout works, cancellation works, integration test passes |
-| `api/routes.py` | All endpoints work, auth enforced, rate limits work |
-| `init.sh` | Validated on fresh iximiuz VM, all permissions correct |
+| `config.py` | Loads/validates env vars, has defaults ✅ (tests pending) |
+| `db/models.py` | All fields from spec ✅ (tests pending) |
+| `api/models.py` | Validation works, error codes match spec ✅ (tests pending) |
+| `task_queue.py` | Retry/backoff works, state transitions correct ✅ (tests pending) |
+| `claude_runner.py` | Timeout works, cancellation works ✅ (integration test pending) |
+| `api/routes.py` | All endpoints work ✅ (auth pending) |
+| `init.sh` | Validated on fresh iximiuz VM (pending) |
 
 ---
 
@@ -194,29 +199,96 @@ Each task must meet these criteria:
 | Repository Setup | 9 | 9 | 100% |
 | Claude Scaffolding | 7 | 8 | 88% |
 | Scripts | 3 | 8 | 38% |
-| Orchestrator (Config/Models) | 2 | 5 | 40% |
-| Orchestrator (Core) | 0 | 3 | 0% |
-| Orchestrator (API) | 0 | 4 | 0% |
-| Orchestrator (Worker) | 0 | 2 | 0% |
-| Orchestrator (Observability) | 0 | 4 | 0% |
+| Orchestrator (Config/Models) | 5 | 5 | 100% |
+| Orchestrator (Core) | 3 | 3 | 100% |
+| Orchestrator (API) | 2 | 4 | 50% |
+| Orchestrator (Worker) | 1 | 2 | 50% |
+| Orchestrator (Observability) | 3 | 4 | 75% |
 | Mobile App | 0 | 10 | 0% |
-| Integration Testing | 0 | 10 | 0% |
-| **Phase 1 Total** | **21** | **63** | **33%** |
+| Integration Testing | 1 | 10 | 10% |
+| **Phase 1 Total** | **34** | **63** | **54%** |
+
+---
+
+## What Can Be Tested Now
+
+### Supported Task Types
+1. **research** - Deep research tasks with web search, browsing, citation
+2. **analysis** - Data analysis tasks with pattern extraction
+3. **document** - Document generation from templates
+
+### Testable API Endpoints
+
+```bash
+# Start the orchestrator
+cd /home/laborant/workspace/Github/deepagent
+source orchestrator/.venv/bin/activate
+PYTHONPATH=. uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
+
+# In another terminal:
+
+# Health check
+curl http://localhost:8000/api/v1/health
+
+# Submit a research task
+curl -X POST http://localhost:8000/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "research",
+    "title": "AI Trends 2024",
+    "description": "Research the top AI trends in 2024",
+    "config": {
+      "depth": "comprehensive",
+      "include_code_examples": false
+    },
+    "delivery": {
+      "email": "user@example.com",
+      "storage": "google_drive"
+    }
+  }'
+
+# List all tasks
+curl http://localhost:8000/api/v1/tasks
+
+# Get task details
+curl http://localhost:8000/api/v1/tasks/{task_id}
+
+# Get task result
+curl http://localhost:8000/api/v1/tasks/{task_id}/result
+
+# Get task logs
+curl http://localhost:8000/api/v1/tasks/{task_id}/logs
+
+# Cancel a task
+curl -X DELETE http://localhost:8000/api/v1/tasks/{task_id}
+
+# Get queue statistics
+curl http://localhost:8000/api/v1/stats
+```
+
+### Current Limitations (Not Yet Implemented)
+- JWT authentication (API is currently open)
+- Rate limiting
+- Request size limits middleware
+- WebSocket streaming
+- Scheduled/recurring tasks
 
 ---
 
 ## Next Priority Tasks
 
-**Focus: Orchestrator core + E2E happy path before mobile app**
+**Focus: E2E testing with Claude CLI**
 
-1. [ ] `orchestrator/config.py` - Settings with pydantic-settings
-2. [ ] `orchestrator/db/models.py` - SQLAlchemy Task/TaskLog models
-3. [ ] `orchestrator/api/models.py` - Pydantic request/response models
-4. [ ] `orchestrator/core/task_queue.py` - Queue with retry logic
-5. [ ] `orchestrator/core/claude_runner.py` - CLI wrapper with timeout
-6. [ ] `orchestrator/api/routes.py` - REST endpoints
-7. [ ] Background worker implementation
-8. [ ] E2E test on iximiuz VM
+1. [x] `orchestrator/config.py` - Settings with pydantic-settings
+2. [x] `orchestrator/db/models.py` - SQLAlchemy Task/TaskLog models
+3. [x] `orchestrator/api/models.py` - Pydantic request/response models
+4. [x] `orchestrator/core/task_queue.py` - Queue with retry logic
+5. [x] `orchestrator/core/claude_runner.py` - CLI wrapper with timeout
+6. [x] `orchestrator/api/routes.py` - REST endpoints
+7. [x] Background worker implementation
+8. [ ] E2E test with real Claude CLI execution
+9. [ ] Add JWT authentication
+10. [ ] Test on iximiuz VM
 
 ---
 
@@ -226,6 +298,7 @@ Each task must meet these criteria:
 - **pi-skills OAuth**: Need to test `gdcli` and `gmcli` authentication flow
 - **X.com scraping**: May need to handle anti-bot measures in `browser-tools`
 - **Mobile scope**: Consider thinner client (minimal screens) until API/worker solid
+- **Claude CLI**: Needs `--dangerously-skip-permissions` flag for automation
 
 ---
 

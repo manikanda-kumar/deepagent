@@ -157,24 +157,33 @@ deepagent/
 **Structure**:
 ```
 orchestrator/
-├── pyproject.toml             # Python project config
+├── __init__.py                # Package metadata
 ├── requirements.txt           # Dependencies
-├── config.py                  # Configuration
+├── config.py                  # Configuration (pydantic-settings)
+├── main.py                    # FastAPI app entry point
 ├── api/
 │   ├── __init__.py
-│   ├── routes.py              # REST API endpoints
-│   ├── models.py              # Pydantic models
+│   ├── routes.py              # REST API endpoints ✅
+│   ├── models.py              # Pydantic models ✅
 │   └── websocket.py           # Real-time updates (Phase 2)
 ├── core/
 │   ├── __init__.py
-│   ├── task_queue.py          # SQLite-based task management
-│   ├── claude_runner.py       # Claude Code CLI session manager
-│   └── result_processor.py    # Process and store results
+│   ├── task_queue.py          # SQLite-based task management ✅
+│   ├── claude_runner.py       # Claude Code CLI session manager ✅
+│   ├── result_processor.py    # Process and store results ✅
+│   └── worker.py              # Background task processor ✅
 ├── db/
 │   ├── __init__.py
-│   └── models.py              # SQLAlchemy models
+│   └── models.py              # SQLAlchemy models ✅
 └── tests/
     └── __init__.py
+```
+
+**Running the Orchestrator**:
+```bash
+cd /path/to/deepagent
+source orchestrator/.venv/bin/activate
+PYTHONPATH=. uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Task States**:
@@ -756,16 +765,21 @@ labctl playground start  # Resumes with persistence
 ### API Endpoints
 
 ```
+# Task Management (✅ Implemented)
 POST   /api/v1/tasks              # Submit new task
-GET    /api/v1/tasks              # List all tasks
+GET    /api/v1/tasks              # List all tasks (with pagination)
 GET    /api/v1/tasks/{id}         # Get task details
-GET    /api/v1/tasks/{id}/result  # Get task result
+GET    /api/v1/tasks/{id}/result  # Get task result with cloud links
+GET    /api/v1/tasks/{id}/logs    # Get task execution logs
 DELETE /api/v1/tasks/{id}         # Cancel task
 
+# Statistics (✅ Implemented)
+GET    /api/v1/stats              # Queue statistics by status
+GET    /api/v1/health             # Health check
+
+# Authentication (Pending)
 POST   /api/v1/auth/register      # Register device
 POST   /api/v1/auth/token         # Get auth token
-
-GET    /api/v1/health             # Health check
 
 # Phase 2
 WS     /api/v1/tasks/{id}/stream  # Real-time progress
