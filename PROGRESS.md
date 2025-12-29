@@ -132,16 +132,16 @@
 - [ ] Verify dedicated user setup and permissions
 - [ ] Test secrets loading from /etc/deepagent/env
 - [x] Test orchestrator starts and accepts requests (local)
-- [ ] Test end-to-end happy path:
-  - [ ] Submit research task via API
-  - [ ] Claude executes (mock or real)
-  - [ ] Result saved to /data/outputs/
+- [x] Test end-to-end happy path:
+  - [x] Submit research task via API
+  - [x] Claude executes (real CLI, not mock)
+  - [x] Result saved to /data/outputs/
   - [ ] Upload to Google Drive via gdcli
   - [ ] Email notification via gmcli
-  - [ ] Task status updated to COMPLETED
-- [ ] Test failure scenarios:
-  - [ ] Claude timeout → FAILED → RETRY
-  - [ ] Max retries exceeded → DEAD
+  - [x] Task status updated to COMPLETED
+- [x] Test failure scenarios:
+  - [x] Claude timeout → FAILED → RETRY (observed with path misconfiguration)
+  - [x] Max retries exceeded → DEAD (3 dead tasks from initial runs)
   - [ ] Upload failure → task still COMPLETED with error note
 - [ ] Test mobile app → API flow
 
@@ -205,24 +205,33 @@ Each task must meet these criteria:
 | Orchestrator (Worker) | 1 | 2 | 50% |
 | Orchestrator (Observability) | 3 | 4 | 75% |
 | Mobile App | 0 | 10 | 0% |
-| Integration Testing | 1 | 10 | 10% |
-| **Phase 1 Total** | **34** | **63** | **54%** |
+| Integration Testing | 6 | 10 | 60% |
+| **Phase 1 Total** | **39** | **63** | **62%** |
 
 ---
 
 ## What Can Be Tested Now
 
 ### Supported Task Types
-1. **research** - Deep research tasks with web search, browsing, citation
+1. **research** - Deep research tasks with web search, browsing, citation ✅ Tested
 2. **analysis** - Data analysis tasks with pattern extraction
 3. **document** - Document generation from templates
+
+### Latest Test Results (2025-12-29)
+
+| Task | Type | Duration | Result |
+|------|------|----------|--------|
+| Simple math (2+2) | research | 12s | ✅ Created output.txt |
+| Rust vs Go comparison | research | 90s | ✅ Created 3KB markdown with sources |
 
 ### Testable API Endpoints
 
 ```bash
-# Start the orchestrator
+# Start the orchestrator (local development)
 cd /home/laborant/workspace/Github/deepagent
 source orchestrator/.venv/bin/activate
+export CLAUDE_PATH=$PWD/claude
+export SKILLS_PATH=$PWD/claude/skills
 PYTHONPATH=. uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
 
 # In another terminal:
@@ -277,7 +286,7 @@ curl http://localhost:8000/api/v1/stats
 
 ## Next Priority Tasks
 
-**Focus: E2E testing with Claude CLI**
+**Focus: Cloud delivery & VM deployment**
 
 1. [x] `orchestrator/config.py` - Settings with pydantic-settings
 2. [x] `orchestrator/db/models.py` - SQLAlchemy Task/TaskLog models
@@ -286,9 +295,10 @@ curl http://localhost:8000/api/v1/stats
 5. [x] `orchestrator/core/claude_runner.py` - CLI wrapper with timeout
 6. [x] `orchestrator/api/routes.py` - REST endpoints
 7. [x] Background worker implementation
-8. [ ] E2E test with real Claude CLI execution
+8. [x] E2E test with real Claude CLI execution ✅ (2025-12-29)
 9. [ ] Add JWT authentication
-10. [ ] Test on iximiuz VM
+10. [ ] Test cloud delivery (gdcli, gmcli)
+11. [ ] Deploy to iximiuz VM
 
 ---
 
@@ -299,6 +309,7 @@ curl http://localhost:8000/api/v1/stats
 - **X.com scraping**: May need to handle anti-bot measures in `browser-tools`
 - **Mobile scope**: Consider thinner client (minimal screens) until API/worker solid
 - **Claude CLI**: Needs `--dangerously-skip-permissions` flag for automation
+- **Path configuration**: Default paths (`/app/deepagent/claude`) are for container deployment; local dev requires `CLAUDE_PATH` and `SKILLS_PATH` environment variables
 
 ---
 
@@ -327,4 +338,4 @@ Based on `review.md`, the following has been incorporated:
 
 ---
 
-*Last updated: 2024-12-29*
+*Last updated: 2025-12-29 (E2E tests passed)*

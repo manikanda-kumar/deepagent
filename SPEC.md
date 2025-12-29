@@ -180,11 +180,22 @@ orchestrator/
 ```
 
 **Running the Orchestrator**:
+
+For local development:
 ```bash
 cd /path/to/deepagent
 source orchestrator/.venv/bin/activate
+
+# Set paths for local development (container defaults won't work locally)
+export CLAUDE_PATH=/path/to/deepagent/claude
+export SKILLS_PATH=/path/to/deepagent/claude/skills
+
 PYTHONPATH=. uvicorn orchestrator.main:app --host 0.0.0.0 --port 8000
 ```
+
+For container/VM deployment, paths default to:
+- `CLAUDE_PATH=/app/deepagent/claude`
+- `SKILLS_PATH=/app/deepagent/claude/skills`
 
 **Task States**:
 ```
@@ -970,6 +981,42 @@ gmcli auth login
 onedrive login
 export BRAVE_API_KEY=your-key
 ```
+
+---
+
+## E2E Test Results (2025-12-29)
+
+The orchestrator has been tested end-to-end with real Claude CLI execution:
+
+### Test 1: Simple Task
+- **Task**: "Calculate 2+2 and save the result to output.txt"
+- **Result**: ✅ Completed in ~12 seconds
+- **Output**: `/data/outputs/{task_id}/output.txt` containing "4"
+
+### Test 2: Research Task
+- **Task**: "Compare Rust and Go for CLI tools"
+- **Result**: ✅ Completed in ~90 seconds
+- **Output**: `/data/outputs/{task_id}/comparison.md` (3KB markdown with sources)
+- **Features verified**:
+  - Web search integration (found 2025 sources)
+  - Markdown document generation
+  - Source citation
+
+### Validated Components
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Task submission API | ✅ | POST /api/v1/tasks |
+| SQLite queue | ✅ | Row-level locking, status tracking |
+| Background worker | ✅ | 5-second polling, picks up tasks |
+| Claude CLI execution | ✅ | Stdin prompt, JSON output |
+| Timeout enforcement | ✅ | Per-task-type limits |
+| Result processing | ✅ | Summary extraction |
+| Task logs | ✅ | Correlation IDs, event tracking |
+| Output directory | ✅ | `/data/outputs/{task_id}/` |
+
+### Known Issues
+- Default paths (`/app/deepagent/claude`) require override for local development
+- Earlier test failures (3 dead tasks) were due to path misconfiguration
 
 ---
 

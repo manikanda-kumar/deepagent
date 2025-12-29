@@ -7,7 +7,8 @@
       "Bash(python3:*)",
       "Bash(source:*)",
       "Bash(PYTHONPATH=/home/laborant/workspace/Github/deepagent python3:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(claude -p --output-format json --dangerously-skip-permissions)"
     ]
   }
 }
