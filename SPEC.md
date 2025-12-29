@@ -179,9 +179,189 @@ orchestrator/
 
 **Task States**:
 ```
-PENDING → RUNNING → PROCESSING → COMPLETED
-                  ↘ FAILED
+PENDING → QUEUED → RUNNING → PROCESSING → COMPLETED
+                           ↘ FAILED → RETRY (max 3) → DEAD
 ```
+
+**State Transitions**:
+| From | To | Trigger |
+|------|-----|---------|
+| PENDING | QUEUED | Task accepted, validated |
+| QUEUED | RUNNING | Worker picks up task |
+| RUNNING | PROCESSING | Claude execution complete, processing results |
+| PROCESSING | COMPLETED | Results uploaded, notification sent |
+| RUNNING | FAILED | Claude error, timeout, or skill failure |
+| FAILED | RETRY | Attempt < max_attempts |
+| RETRY | QUEUED | Backoff elapsed |
+| FAILED | DEAD | max_attempts exceeded |
+
+#### Data Models
+
+**SQLAlchemy Task Model** (`db/models.py`):
+```python
+from sqlalchemy import Column, String, Integer, DateTime, JSON, Enum
+from sqlalchemy.ext.declarative import declarative_base
+import enum
+from datetime import datetime
+
+Base = declarative_base()
+
+class TaskStatus(enum.Enum):
+    PENDING = "pending"
+    QUEUED = "queued"
+    RUNNING = "running"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    RETRY = "retry"
+    DEAD = "dead"
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(String, primary_key=True)  # UUID
+    type = Column(String, nullable=False)  # research, analysis, document
+    title = Column(String, nullable=False)
+    description = Column(String)
+    config = Column(JSON)  # Task-specific configuration
+    delivery = Column(JSON)  # Email, storage preferences
+
+    status = Column(Enum(TaskStatus), default=TaskStatus.PENDING)
+    attempts = Column(Integer, default=0)
+    max_attempts = Column(Integer, default=3)
+    last_error = Column(String)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    queued_at = Column(DateTime)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+
+    # Output references
+    outputs_path = Column(String)  # /data/outputs/{task_id}/
+    result_summary = Column(String)
+    cloud_links = Column(JSON)  # {"gdrive": "...", "onedrive": "..."}
+
+    # Attachments
+    attachment_refs = Column(JSON)  # List of uploaded file paths
+
+class TaskLog(Base):
+    __tablename__ = "task_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(String, nullable=False)
+    level = Column(String)  # info, warning, error
+    message = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    correlation_id = Column(String)  # For request tracing
+```
+
+**Pydantic Request/Response Models** (`api/models.py`):
+```python
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+from enum import Enum
+
+class TaskType(str, Enum):
+    RESEARCH = "research"
+    ANALYSIS = "analysis"
+    DOCUMENT = "document"
+
+class TaskCreate(BaseModel):
+    type: TaskType
+    title: str = Field(..., max_length=200)
+    description: str
+    config: Optional[Dict[str, Any]] = None
+    delivery: Optional[Dict[str, Any]] = None
+    attachments: Optional[List[str]] = None
+
+class TaskResponse(BaseModel):
+    id: str
+    type: TaskType
+    title: str
+    status: str
+    attempts: int
+    created_at: datetime
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+
+class TaskResult(BaseModel):
+    task_id: str
+    status: str
+    summary: Optional[str]
+    outputs_path: Optional[str]
+    cloud_links: Optional[Dict[str, str]]
+    logs: Optional[List[Dict[str, Any]]]
+
+class ErrorResponse(BaseModel):
+    error: str
+    code: str  # e.g., "TASK_NOT_FOUND", "VALIDATION_ERROR"
+    details: Optional[Dict[str, Any]] = None
+```
+
+#### Execution & Resilience
+
+**Background Worker Architecture**:
+- Claude execution runs in a background worker process, not on the request thread
+- FastAPI handles task submission and status queries only
+- Worker picks tasks from SQLite queue with row-level locking
+
+**Task Limits**:
+| Task Type | Max Runtime | Max Turns | Timeout Action |
+|-----------|-------------|-----------|----------------|
+| research | 30 min | 100 | Cancel + partial save |
+| analysis | 20 min | 50 | Cancel + partial save |
+| document | 15 min | 30 | Cancel + partial save |
+
+**Retry Strategy**:
+```python
+# Exponential backoff with jitter
+def get_retry_delay(attempt: int) -> int:
+    base_delay = 60  # 1 minute
+    max_delay = 900  # 15 minutes
+    delay = min(base_delay * (2 ** attempt), max_delay)
+    jitter = random.uniform(0, delay * 0.1)
+    return delay + jitter
+```
+
+**Cancellation**:
+- Tasks can be cancelled via `DELETE /api/v1/tasks/{id}`
+- Running Claude processes terminated via SIGTERM
+- Partial results saved before cleanup
+
+#### Observability
+
+**Structured Logging**:
+```python
+# All logs include correlation IDs
+{
+    "timestamp": "2024-01-15T10:30:00Z",
+    "level": "info",
+    "request_id": "req-abc123",
+    "task_id": "task-xyz789",
+    "event": "task_started",
+    "message": "Starting Claude execution for research task"
+}
+```
+
+**Key Events**:
+- `task_accepted`: Task submitted and validated
+- `task_queued`: Added to worker queue
+- `task_started`: Worker began processing
+- `claude_invoked`: Claude CLI started
+- `claude_completed`: Claude CLI finished
+- `upload_success` / `upload_failed`: Cloud storage result
+- `email_success` / `email_failed`: Notification result
+- `task_completed` / `task_failed`: Final status
+
+**Metrics** (logged to stdout for systemd):
+- `tasks_queued`: Current queue depth
+- `tasks_running`: Active worker count
+- `tasks_completed_total`: Cumulative successes
+- `tasks_failed_total`: Cumulative failures
+- `claude_duration_seconds`: Execution time histogram
+- `retry_count`: Retries per task
 
 ### 3. Claude Code Scaffolding
 
@@ -460,6 +640,9 @@ apt-get update && apt-get install -y \
     chromium-browser \
     git curl jq
 
+# Create dedicated user for orchestrator
+useradd -r -m -s /bin/bash deepagent || true
+
 # Install Claude Code CLI
 npm install -g @anthropic-ai/claude-code
 
@@ -475,23 +658,34 @@ cd /opt/pi-skills && npm install
 
 # Clone deepagent monorepo
 git clone $DEEPAGENT_REPO_URL /app/deepagent
-cd /app/deepagent
+chown -R deepagent:deepagent /app/deepagent
 
-# Setup orchestrator
+# Setup orchestrator as deepagent user
+su - deepagent -c "
 cd /app/deepagent/orchestrator
 python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+"
 
 # Symlink pi-skills into claude/ directory
-ln -s /opt/pi-skills/browser-tools /app/deepagent/claude/skills/
-ln -s /opt/pi-skills/gdcli /app/deepagent/claude/skills/
-ln -s /opt/pi-skills/gmcli /app/deepagent/claude/skills/
-ln -s /opt/pi-skills/brave-search /app/deepagent/claude/skills/
-ln -s /opt/pi-skills/youtube-transcript /app/deepagent/claude/skills/
+ln -sf /opt/pi-skills/browser-tools /app/deepagent/claude/skills/
+ln -sf /opt/pi-skills/gdcli /app/deepagent/claude/skills/
+ln -sf /opt/pi-skills/gmcli /app/deepagent/claude/skills/
+ln -sf /opt/pi-skills/brave-search /app/deepagent/claude/skills/
+ln -sf /opt/pi-skills/youtube-transcript /app/deepagent/claude/skills/
 
-# Setup persistence directories
+# Setup persistence directories with proper permissions
 mkdir -p /data/{db,outputs,logs,tokens}
+chown -R deepagent:deepagent /data
+chmod 700 /data/db /data/tokens
+chmod 755 /data/outputs /data/logs
+
+# Create secrets directory
+mkdir -p /etc/deepagent
+touch /etc/deepagent/env
+chmod 600 /etc/deepagent/env
+chown deepagent:deepagent /etc/deepagent/env
 
 # Configure systemd service
 cat > /etc/systemd/system/deepagent.service << 'EOF'
@@ -501,13 +695,19 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=deepagent
+Group=deepagent
 WorkingDirectory=/app/deepagent/orchestrator
+EnvironmentFile=/etc/deepagent/env
 ExecStart=/app/deepagent/orchestrator/venv/bin/uvicorn api.routes:app --host 0.0.0.0 --port 8000
 Restart=always
-Environment=DATABASE_URL=sqlite:////data/db/deepagent.db
-Environment=CLAUDE_PATH=/app/deepagent/claude
-Environment=OUTPUTS_PATH=/data/outputs
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/data
 
 [Install]
 WantedBy=multi-user.target
@@ -518,7 +718,9 @@ systemctl enable deepagent
 systemctl start deepagent
 
 echo "DeepAgent initialized successfully!"
-echo "Next: Run 'labctl ssh' then execute /app/deepagent/scripts/setup-oauth.sh"
+echo "Next steps:"
+echo "  1. Add secrets to /etc/deepagent/env"
+echo "  2. Run: su - deepagent -c '/app/deepagent/scripts/setup-oauth.sh'"
 ```
 
 **labctl Commands**:
@@ -578,13 +780,58 @@ POST   /api/v1/schedules          # Create scheduled task
 4. **History** - All past tasks with search/filter
 5. **Settings** - Cloud accounts, notifications, preferences
 
-### Security
+### Security & Operations
 
-- **API Authentication**: JWT tokens with device registration
-- **Cloud OAuth**: Tokens managed by gdcli/onedrive-cli (stored in `/data/tokens/`)
+#### Process Isolation
+- **Dedicated user**: Orchestrator runs as `deepagent` user, not root
+- **Permissions**: Tight access control on `/data/` directories
+  ```
+  /data/db/       → 700 deepagent:deepagent
+  /data/outputs/  → 755 deepagent:deepagent
+  /data/logs/     → 755 deepagent:deepagent
+  /data/tokens/   → 700 deepagent:deepagent
+  ```
+
+#### Secrets Management
+- **Environment variables**: Load from `/etc/deepagent/env` (mode 600)
+- **Never embed secrets** in systemd unit files or code
+- **OAuth tokens**: Stored in user home, not world-readable
+
+#### API Security
+- **JWT Authentication**:
+  - Token TTL: 24 hours (configurable)
+  - Refresh token: 7 days
+  - Signing key rotation: Document procedure
+- **Rate Limiting**:
+  - 10 requests/second per device
+  - 100 tasks/hour per device
+- **CORS**: Restrict to mobile app origins
+- **Payload Limits**:
+  - Request body: 10MB max
+  - Attachments: 25MB per file, 100MB total per task
+
+#### Input Validation
+- **Attachment types**: Whitelist (pdf, docx, txt, md, csv, json, png, jpg)
+- **URL validation**: Reject internal/private IPs in config
+- **Task config**: Schema validation against templates
+
+#### Cloud OAuth
+- Tokens managed by gdcli/onedrive-cli (stored in `/home/deepagent/.config/`)
 - **VM Access**: SSH key authentication via labctl
-- **Data**: Sensitive data encrypted at rest
 - **API Exposure**: HTTPS via labctl expose
+
+### API Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `TASK_NOT_FOUND` | 404 | Task ID does not exist |
+| `TASK_ALREADY_COMPLETED` | 409 | Cannot modify completed task |
+| `VALIDATION_ERROR` | 400 | Invalid request payload |
+| `ATTACHMENT_TOO_LARGE` | 413 | File exceeds size limit |
+| `UNSUPPORTED_FILE_TYPE` | 415 | File type not allowed |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
+| `UNAUTHORIZED` | 401 | Invalid or expired token |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
 
 ---
 

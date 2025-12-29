@@ -59,3 +59,4 @@ htmlcov/
 # SPEC
 *.md
 !SPEC.md
+!PROGRESS.md
