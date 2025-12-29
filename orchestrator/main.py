@@ -10,9 +10,12 @@ import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .api.routes import router as api_router
 from .config import get_settings
@@ -99,14 +102,40 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(api_router)
 
 
-# Root endpoint
-@app.get("/")
-async def root():
-    return {
-        "name": "DeepAgent Orchestrator",
-        "version": "1.0.0",
-        "docs": "/docs",
-    }
+# Serve Flutter web app static files
+# Look for the app in common locations
+_flutter_web_paths = [
+    Path(__file__).parent.parent / "app" / "build" / "web",  # Local dev
+    Path("/app/deepagent/app/build/web"),  # Container
+]
+
+_flutter_web_dir = None
+for p in _flutter_web_paths:
+    if p.exists() and (p / "index.html").exists():
+        _flutter_web_dir = p
+        break
+
+if _flutter_web_dir:
+    logger.info(f"Serving Flutter web app from: {_flutter_web_dir}")
+
+    # Serve index.html for the root path
+    @app.get("/")
+    async def serve_flutter_app():
+        return FileResponse(_flutter_web_dir / "index.html")
+
+    # Mount static files (but not at root to avoid conflicts with API)
+    app.mount("/", StaticFiles(directory=str(_flutter_web_dir), html=True), name="static")
+else:
+    logger.warning("Flutter web app not found, serving API-only mode")
+
+    # Root endpoint (API-only mode)
+    @app.get("/")
+    async def root():
+        return {
+            "name": "DeepAgent Orchestrator",
+            "version": "1.0.0",
+            "docs": "/docs",
+        }
 
 
 def main():
