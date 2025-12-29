@@ -33,7 +33,9 @@
 - [x] Fix systemd service (PYTHONPATH, correct uvicorn module path)
 - [x] Add Python version detection and error handling
 - [x] Update `setup-oauth.sh` to write to /etc/deepagent/env
-- [ ] Test `init.sh` on iximiuz playground
+- [x] Fix PEP 668 compliance (pipx for Python tools)
+- [x] Fix pi-skills npm install (per-skill package.json)
+- [x] Test `init.sh` on iximiuz playground (Ubuntu 24.04) ✅
 - [ ] Test `setup-oauth.sh` flow
 
 ### Orchestrator (`orchestrator/`)
@@ -131,9 +133,9 @@
 
 **Priority: E2E Happy Path First**
 
-- [ ] Deploy to iximiuz VM with new init.sh
-- [ ] Verify dedicated user setup and permissions
-- [ ] Test secrets loading from /etc/deepagent/env
+- [x] Deploy to iximiuz VM with new init.sh ✅ (Ubuntu 24.04)
+- [x] Verify dedicated user setup and permissions
+- [x] Test secrets loading from /etc/deepagent/env
 - [x] Test orchestrator starts and accepts requests (local)
 - [x] Test end-to-end happy path:
   - [x] Submit research task via API
@@ -191,7 +193,7 @@ Each task must meet these criteria:
 | `task_queue.py` | Retry/backoff works, state transitions correct ✅ (tests pending) |
 | `claude_runner.py` | Timeout works, cancellation works ✅ (integration test pending) |
 | `api/routes.py` | All endpoints work ✅ (auth pending) |
-| `init.sh` | Validated on fresh iximiuz VM (pending) |
+| `init.sh` | Validated on fresh iximiuz VM ✅ (Ubuntu 24.04) |
 
 ---
 
@@ -201,15 +203,15 @@ Each task must meet these criteria:
 |----------|------|-------|----------|
 | Repository Setup | 9 | 9 | 100% |
 | Claude Scaffolding | 7 | 8 | 88% |
-| Scripts | 9 | 11 | 82% |
+| Scripts | 12 | 13 | 92% |
 | Orchestrator (Config/Models) | 5 | 5 | 100% |
 | Orchestrator (Core) | 3 | 3 | 100% |
 | Orchestrator (API) | 2 | 4 | 50% |
 | Orchestrator (Worker) | 1 | 2 | 50% |
 | Orchestrator (Observability) | 3 | 4 | 75% |
 | Mobile App | 0 | 10 | 0% |
-| Integration Testing | 6 | 10 | 60% |
-| **Phase 1 Total** | **45** | **66** | **68%** |
+| Integration Testing | 9 | 10 | 90% |
+| **Phase 1 Total** | **51** | **68** | **75%** |
 
 ---
 
@@ -341,4 +343,4 @@ Based on `review.md`, the following has been incorporated:
 
 ---
 
-*Last updated: 2025-12-29 (Scripts updated for VM deployment)*
+*Last updated: 2025-12-29 (VM deployment tested on iximiuz Ubuntu 24.04)*

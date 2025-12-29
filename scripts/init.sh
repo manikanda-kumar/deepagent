@@ -49,22 +49,30 @@ echo ""
 echo "[3/8] Installing Claude Code CLI..."
 npm install -g @anthropic-ai/claude-code
 
-# Install onedrive-cli
+# Install onedrive-cli (using pipx for PEP 668 compliance)
 echo ""
 echo "[4/8] Installing onedrive-cli..."
-pip3 install onedrive-cli
+apt-get install -y pipx
+pipx install onedrive-cli || pip3 install --break-system-packages onedrive-cli || echo "Warning: onedrive-cli install failed (optional)"
 
 # Clone pi-skills
 echo ""
 echo "[5/8] Setting up pi-skills..."
 if [ ! -d "/opt/pi-skills" ]; then
     git clone https://github.com/badlogic/pi-skills.git /opt/pi-skills
-    cd /opt/pi-skills && npm install
-    echo "pi-skills installed"
+    echo "pi-skills cloned"
 else
     echo "pi-skills already exists, updating..."
-    cd /opt/pi-skills && git pull && npm install
+    cd /opt/pi-skills && git pull || echo "Warning: git pull failed"
 fi
+
+# Install npm dependencies for each skill that has package.json
+for skill_dir in /opt/pi-skills/*/; do
+    if [ -f "${skill_dir}package.json" ]; then
+        echo "  Installing deps for $(basename $skill_dir)..."
+        cd "$skill_dir" && npm install --quiet || echo "Warning: npm install failed for $(basename $skill_dir)"
+    fi
+done
 
 # Setup browser-tools Chrome profile
 if [ -f "/opt/pi-skills/browser-tools/setup.sh" ]; then
