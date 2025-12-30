@@ -241,6 +241,7 @@ You are a document generation agent. Your job is to create professional document
             "--print",  # Non-interactive mode
             "--output-format", "json",
             "--dangerously-skip-permissions",  # For automation
+            "--model", "haiku",  # Fast and cost-efficient (Haiku 4.5)
         ]
 
         # Add allowed tools based on task type
